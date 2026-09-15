@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Trio Shift</title>
+<style>
+  :root{
+    --bg-deep:#16241F;
+    --bg-panel:#1F3329;
+    --bg-panel-2:#263D31;
+    --cell:#2C4438;
+    --brass:#D9A441;
+    --jade:#7FD9BE;
+    --ivory:#EFE9DC;
+    --muted:#7C9184;
+    --fail:#E15554;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:radial-gradient(circle at 50% -20%, #23392E 0%, var(--bg-deep) 55%);
+    font-family: Georgia, 'Times New Roman', serif;
+    color:var(--ivory);
+    overflow-x:hidden;
+    user-select:none;
+  }
+  #app{
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100vh; padding:18px 14px 26px; gap:10px;
+  }
+  header{ text-align:center; }
+  .eyebrow{
+    font-family: ui-monospace, monospace;
+    font-size:11px; letter-spacing:4px; color:var(--brass);
+    text-transform:uppercase; margin-bottom:4px;
+  }
+  h1{
+    font-size:clamp(28px,7.5vw,40px);
+    margin:0; font-weight:700; letter-spacing:1px; color:var(--ivory);
+  }
+  h1 span{ color:var(--jade); font-style:italic; }
+
+  #topbar{
+    display:flex; align-items:center; justify-content:center; gap:14px;
+    margin-top:6px; flex-wrap:wrap;
+  }
+  .puzzle-pill{
+    display:inline-flex; flex-direction:column; align-items:center;
+    background:var(--bg-panel);
+    border:1px solid rgba(217,164,65,0.25);
+    border-radius:14px;
+    padding:7px 18px;
+  }
+  .puzzle-pill .date{ font-family: ui-monospace, monospace; font-size:12px; color:var(--muted); letter-spacing:1px; }
+  .puzzle-pill .name{ font-size:15px; color:var(--brass); font-style:italic; margin-top:2px; }
+
+  #hearts{ display:flex; gap:4px; align-items:center; background:var(--bg-panel); border:1px solid rgba(225,85,84,0.3); border-radius:14px; padding:9px 16px; }
+  .heart{ font-size:17px; filter:grayscale(0); }
+  .heart.empty{ filter:grayscale(1); opacity:0.3; }
+
+  #scoreBar{
+    display:flex; gap:10px; align-items:center; margin-top:4px; flex-wrap:wrap; justify-content:center;
+  }
+  .score-chip{
+    background:var(--bg-panel); border:1px solid rgba(127,217,190,0.25); border-radius:12px;
+    padding:6px 14px; font-family:ui-monospace,monospace; font-size:11px; color:var(--muted);
+    display:flex; align-items:center; gap:6px;
+  }
+  .score-chip b{ color:var(--jade); font-size:13px; }
+  #leaderRow{
+    font-family:ui-monospace,monospace; font-size:11px; color:var(--muted); text-align:center;
+    max-width:320px;
+  }
+  #leaderRow b{ color:var(--brass); }
+
+  #recordBanner{
+    position:fixed; top:0; left:0; right:0; z-index:40;
+    background:linear-gradient(90deg,var(--brass),#F0C36B);
+    color:#1c1508; font-family:ui-monospace,monospace; font-weight:700; font-size:13px;
+    text-align:center; padding:10px 8px;
+    transform:translateY(-100%);
+    transition:transform 0.5s cubic-bezier(.2,1,.3,1);
+    box-shadow:0 6px 16px rgba(0,0,0,0.4);
+  }
+  #recordBanner.show{ transform:translateY(0); }
+
+  #nameOverlay{
+    position:fixed; inset:0; background:rgba(8,14,11,0.9);
+    display:none; align-items:center; justify-content:center; z-index:35;
+  }
+  #nameOverlay.show{ display:flex; }
+  #nameCard{
+    background:var(--bg-panel); border-radius:20px; padding:28px 26px; text-align:center;
+    max-width:280px; border:1px solid rgba(217,164,65,0.25);
+  }
+  #nameCard h2{ margin:0 0 8px; font-size:20px; }
+  #nameCard p{ color:var(--muted); font-size:12.5px; margin:0 0 14px; }
+  #nameInput{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(217,164,65,0.3);
+    background:var(--bg-panel-2); color:var(--ivory); font-family:Georgia,serif; font-size:15px;
+    margin-bottom:14px; text-align:center;
+  }
+  #nameInput:focus{ outline:none; border-color:var(--brass); }
+
+  #modeBar{ display:flex; gap:8px; margin-top:6px; }
+  .modeBtn{ min-width:0; padding:8px 14px; }
+  .modeBtn.active{ background:linear-gradient(90deg,var(--brass),#F0C36B); color:#1c1508; border:none; }
+
+  #editorPanel{
+    width:100%; max-width:340px; display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:6px;
+  }
+  #editorSizeRow{ display:flex; align-items:center; gap:10px; }
+  #editorSizeRow .btn{ min-width:36px; padding:6px 10px; }
+  #editorLegend{ font-size:11px; color:var(--muted); text-align:center; font-family:ui-monospace,monospace; line-height:1.5; }
+  #editorControls{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  #editorControls .btn.active{ background:linear-gradient(90deg,var(--jade),#4fae94); color:#0a1f19; border:none; }
+  #validateResult{ font-family:ui-monospace,monospace; font-size:12px; text-align:center; min-height:16px; }
+  #validateResult.ok{ color:var(--jade); }
+  #validateResult.bad{ color:var(--fail); }
+  #exportBox{
+    width:100%; height:70px; margin-top:8px; border-radius:10px; border:1px solid rgba(217,164,65,0.3);
+    background:var(--bg-panel-2); color:var(--jade); font-family:ui-monospace,monospace; font-size:10px;
+    padding:8px; resize:none;
+  }
+
+  #featuredPanel{ width:100%; max-width:340px; margin-top:6px; }
+  .featuredRow{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:var(--bg-panel); border:1px solid rgba(217,164,65,0.2); border-radius:12px;
+    padding:12px 14px; margin-bottom:8px; font-family:ui-monospace,monospace; font-size:12px;
+  }
+  .featuredRow .info b{ color:var(--brass); display:block; font-size:14px; }
+  .featuredRow .info span{ color:var(--muted); font-size:11px; }
+  #featuredList:empty::after{ content:'No featured levels yet — check back soon!'; color:var(--muted); font-size:12px; }
+  #featuredNote{ font-family:ui-monospace,monospace; font-size:10px; color:var(--muted); text-align:center; margin-bottom:10px; }
+
+  #ghFormPanel{ display:flex; flex-direction:column; gap:8px; width:100%; background:var(--bg-panel-2); border:1px solid rgba(217,164,65,0.2); border-radius:12px; padding:12px; margin-top:8px; }
+  #ghFormPanel input{
+    width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(217,164,65,0.25);
+    background:var(--bg-deep); color:var(--ivory); font-family:ui-monospace,monospace; font-size:11px;
+  }
+  #ghFormPanel input:focus{ outline:none; border-color:var(--brass); }
+  #publishedListPanel{ width:100%; display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .pubRow{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:var(--bg-panel-2); border-radius:8px; padding:8px 10px;
+    font-family:ui-monospace,monospace; font-size:11px;
+  }
+  .pubRow .btn{ min-width:0; padding:5px 10px; font-size:10px; }
+
+  #myLevelsOverlay{
+    position:fixed; inset:0; background:rgba(8,14,11,0.88);
+    display:none; align-items:center; justify-content:center; z-index:32;
+  }
+  #myLevelsOverlay.show{ display:flex; }
+  #myLevelsCard{
+    background:var(--bg-panel); border-radius:20px; padding:22px 20px; text-align:center;
+    max-width:340px; width:90vw; max-height:80vh; overflow-y:auto;
+    border:1px solid rgba(217,164,65,0.25);
+  }
+  #myLevelsCard h2{ margin:0 0 12px; font-size:20px; }
+  .myLevelRow{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:var(--bg-panel-2); border-radius:10px; padding:10px 12px; margin-bottom:8px;
+    font-family:ui-monospace,monospace; font-size:12px;
+  }
+  .myLevelRow .info{ text-align:left; }
+  .myLevelRow .info b{ color:var(--brass); display:block; font-size:13px; }
+  .myLevelRow .actions{ display:flex; gap:6px; }
+  .myLevelRow .actions .btn{ min-width:0; padding:6px 10px; font-size:10px; }
+  #myLevelsList:empty::after{ content:'No custom levels yet.'; color:var(--muted); font-size:12px; }
+
+  #hud{ display:flex; align-items:center; gap:18px; margin-top:2px; }
+  .hud-block{ text-align:center; }
+  .hud-label{ font-family:ui-monospace,monospace; font-size:10px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
+  .hud-value{ font-family:ui-monospace,monospace; font-size:20px; color:var(--ivory); font-weight:700; margin-top:2px; }
+  .hud-value.timer{ color:var(--jade); }
+
+  #board-wrap{
+    position:relative; margin-top:4px;
+    background:linear-gradient(160deg,#2E4A3B,#152420);
+    padding:9px; border-radius:18px;
+    box-shadow:0 22px 46px -18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
+    border:1px solid rgba(217,164,65,0.15);
+  }
+  #board{ display:grid; gap:4px; }
+  .cell{
+    background:var(--cell);
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.04);
+  }
+  .cell.x{ background:linear-gradient(160deg,#3A5445,#233A2E); }
+  .cell.x::before{ content:'✕'; color:var(--brass); font-size:15px; font-weight:900; font-family:ui-monospace,monospace; }
+  .cell.blocked{ background:transparent; box-shadow:none; }
+  .cell.o::before{ content:''; width:62%; height:62%; border-radius:50%; border:4px solid var(--jade); }
+  .cell.o.player::before{ border-color: var(--brass); }
+  .cell.o.player::after{
+    content:''; position:absolute; width:5px; height:5px; border-radius:50%; background:var(--brass);
+    box-shadow: 6px 0 0 var(--brass); transform: translate(-3px,-2px);
+  }
+  .cell.win{ animation:winPulse 0.8s ease-in-out infinite alternate; }
+  @keyframes winPulse{ from{ box-shadow:inset 0 0 0 2px var(--jade);} to{ box-shadow:inset 0 0 0 2px var(--jade), 0 0 14px 3px rgba(127,217,190,0.6);} }
+  .cell.fail{ animation:failPulse 0.5s ease-in-out infinite alternate; }
+  @keyframes failPulse{ from{ box-shadow:inset 0 0 0 2px var(--fail);} to{ box-shadow:inset 0 0 0 2px var(--fail), 0 0 14px 3px rgba(225,85,84,0.65);} }
+  .cell.slide{ animation:slidePop 0.15s ease-out; }
+  @keyframes slidePop{ 0%{ transform:scale(0.85);} 100%{ transform:scale(1);} }
+  .cell.hint{ animation:hintPulse 0.7s ease-in-out infinite alternate; }
+  @keyframes hintPulse{ from{ box-shadow:inset 0 0 0 2px var(--brass);} to{ box-shadow:inset 0 0 0 2px var(--brass), 0 0 12px 3px rgba(217,164,65,0.7);} }
+
+  #controls{ display:flex; gap:10px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
+  .btn{
+    background:var(--bg-panel); color:var(--ivory);
+    border:1px solid rgba(217,164,65,0.2); border-radius:12px;
+    padding:9px 16px; font-family:ui-monospace,monospace;
+    font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    cursor:pointer; min-width:58px;
+  }
+  .btn:active{ transform:scale(0.95); }
+  .btn .icon{ font-size:16px; }
+  .btn.hintBtn{ border-color:rgba(217,164,65,0.5); }
+
+  #status{
+    margin-top:2px; font-size:12.5px; color:var(--muted); font-family:ui-monospace,monospace;
+    min-height:16px; text-align:center; max-width:320px;
+  }
+
+  #overlay{
+    position:fixed; inset:0; background:rgba(8,14,11,0.82);
+    display:none; align-items:center; justify-content:center; z-index:20;
+  }
+  #overlay.show{ display:flex; }
+  #overlay-card{
+    background:var(--bg-panel); border-radius:20px; padding:28px 26px; text-align:center;
+    max-width:300px; border:1px solid rgba(217,164,65,0.25);
+  }
+  #overlay-card h2{ margin:0 0 6px; font-size:23px; }
+  #overlay-card h2.win{ color:var(--jade); }
+  #overlay-card h2.fail{ color:var(--fail); }
+  #overlay-card p{ color:var(--muted); font-size:13px; line-height:1.5; margin:0 0 16px; font-family:Georgia,serif; }
+  #overlay-card .time{ font-family:ui-monospace,monospace; font-size:32px; color:var(--brass); margin:4px 0 12px; }
+  #overlay-card .btn{ margin:6px auto 0; background:linear-gradient(90deg,var(--brass),#F0C36B); color:#1c1508; border:none; }
+  #overlay-card .btn.secondary{ background:var(--bg-panel-2); color:var(--ivory); border:1px solid rgba(255,255,255,0.1); }
+
+  #adOverlay{
+    position:fixed; inset:0; background:#000; display:none; align-items:center; justify-content:center; z-index:30;
+    flex-direction:column; gap:14px; color:#fff; font-family:ui-monospace,monospace;
+  }
+  #adOverlay.show{ display:flex; }
+  #adOverlay .adbox{
+    width:260px; height:150px; border:2px dashed rgba(255,255,255,0.3); border-radius:12px;
+    display:flex; align-items:center; justify-content:center; font-size:13px; color:rgba(255,255,255,0.6);
+  }
+  #adOverlay .adTimer{ font-size:28px; color:var(--jade); }
+
+  footer{ font-family:ui-monospace,monospace; font-size:10px; color:var(--muted); letter-spacing:1px; margin-top:2px; text-align:center; }
+
+  #homeScreen{ display:flex; flex-direction:column; align-items:center; gap:22px; margin-top:24px; width:100%; }
+  .homeCard{
+    background:var(--bg-panel); border:1px solid rgba(217,164,65,0.25); border-radius:16px;
+    padding:14px 30px; text-align:center;
+  }
+  .homeCardLabel{ font-family:ui-monospace,monospace; font-size:11px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+  .homeCardValue{ font-family:ui-monospace,monospace; font-size:26px; color:var(--jade); font-weight:700; margin-top:2px; }
+  #levelTrack{
+    display:flex; align-items:center; gap:10px; overflow-x:auto; max-width:100%;
+    padding:14px 20px; scrollbar-width:none;
+  }
+  #levelTrack::-webkit-scrollbar{ display:none; }
+  .levelDot{
+    flex:none; width:52px; height:52px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:ui-monospace,monospace; font-weight:700; font-size:15px;
+    background:var(--bg-panel); border:2px solid rgba(127,217,190,0.25); color:var(--ivory);
+    position:relative;
+  }
+  .levelDot::after{
+    content:''; position:absolute; right:-13px; top:50%; width:10px; height:2px; background:rgba(127,217,190,0.25);
+  }
+  .levelDot:last-child::after{ display:none; }
+  .levelDot.current{
+    background:linear-gradient(135deg,var(--brass),#F0C36B); color:#1c1508; border-color:var(--brass);
+    transform:scale(1.12);
+  }
+  .levelDot.done{ border-color:var(--jade); color:var(--jade); }
+  .homeSub{ font-family:ui-monospace,monospace; font-size:11px; color:var(--muted); text-align:center; }
+
+  #homeBtn{ margin-top:2px; }
+
+  #starsRow{ display:flex; justify-content:center; gap:8px; margin:4px 0 14px; }
+  #starsRow .star{ font-size:34px; filter:grayscale(1); opacity:0.35; }
+  #starsRow .star.lit{ filter:grayscale(0); opacity:1; }
+  #statsGrid{
+    display:grid; grid-template-columns:1fr 1fr; gap:8px 18px;
+    background:var(--bg-panel-2); border-radius:12px; padding:14px 18px; margin:0 0 14px;
+    font-family:ui-monospace,monospace; font-size:12px;
+  }
+  #statsGrid .label{ color:var(--muted); }
+  #statsGrid .value{ color:var(--ivory); font-weight:700; text-align:right; }
+</style>
+</head>
+<body>
+<div id="recordBanner"></div>
+
+<div id="nameOverlay">
+  <div id="nameCard">
+    <h2>Welcome</h2>
+    <p>Enter a name for the leaderboard — shortest mover on each level gets shown here.</p>
+    <input type="text" id="nameInput" placeholder="Your name" maxlength="16" />
+    <div class="btn" id="nameSubmit" style="background:linear-gradient(90deg,var(--brass),#F0C36B); color:#1c1508; border:none; margin:0 auto;">Start</div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="eyebrow">endless push puzzle</div>
+    <h1 id="titleTap">TRIO <span>SHIFT</span></h1>
+  </header>
+
+  <div id="homeScreen">
+    <div class="homeCard">
+      <div class="homeCardLabel">Score</div>
+      <div class="homeCardValue" id="homeScoreVal">0</div>
+    </div>
+    <div id="levelTrack"></div>
+    <div class="btn primary" id="homePlayBtn" style="min-width:200px; padding:16px 0; font-size:14px;">
+      <span id="homePlayLabel">Play Level 1</span>
+    </div>
+  </div>
+
+  <div id="topbar" style="display:none;">
+    <div class="puzzle-pill">
+      <div class="date mono" id="levelLabel">Level 1</div>
+      <div class="name" id="puzzleName">—</div>
+    </div>
+    <div id="hearts"></div>
+  </div>
+
+  <div id="modeBar">
+    <div class="btn modeBtn active" id="playModeBtn"><span class="icon">▶</span>Play</div>
+    <div class="btn modeBtn" id="featuredModeBtn" style="display:none;"><span class="icon">★</span>Featured</div>
+    <div class="btn modeBtn" id="createModeBtn" style="display:none;"><span class="icon">✎</span>Create</div>
+    <div class="btn modeBtn" id="myLevelsBtn" style="display:none;"><span class="icon">📁</span>My Levels</div>
+  </div>
+
+  <div id="scoreBar">
+    <div class="score-chip">Score <b id="totalScoreVal">0</b></div>
+    <div class="score-chip">Levels <b id="levelsDoneVal">0</b></div>
+  </div>
+  <div id="leaderRow">Loading leaderboard…</div>
+
+  <div id="hud">
+    <div class="hud-block">
+      <div class="hud-label">Time</div>
+      <div class="hud-value timer mono" id="timerVal">00.0</div>
+    </div>
+    <div class="hud-block">
+      <div class="hud-label">Moves</div>
+      <div class="hud-value mono" id="movesVal">0</div>
+    </div>
+  </div>
+
+  <div id="board-wrap"><div id="board"></div></div>
+
+  <div id="editorPanel" style="display:none;">
+    <div id="editorSizeRow">
+      <span class="hud-label">Grid Size</span>
+      <div class="btn" id="sizeMinus">−</div>
+      <span id="editorSizeVal" class="hud-value mono">6</span>
+      <div class="btn" id="sizePlus">+</div>
+    </div>
+    <div id="editorLegend">
+      Tap a cell to cycle: Empty → X → O → Blocked. Tap "Set Player" then tap an O to mark it as the mover.
+    </div>
+    <div id="editorControls">
+      <div class="btn" id="setPlayerBtn"><span class="icon">⊙</span>Set Player</div>
+      <div class="btn" id="clearBtn"><span class="icon">🗑</span>Clear</div>
+      <div class="btn" id="validateBtn"><span class="icon">✓</span>Validate</div>
+      <div class="btn" id="testPlayBtn"><span class="icon">🎮</span>Test Play</div>
+      <div class="btn" id="exportBtn"><span class="icon">⇩</span>Export Code</div>
+      <div class="btn" id="ghSettingsToggleBtn"><span class="icon">⚙</span>GitHub</div>
+      <div class="btn" id="publishBtn"><span class="icon">📤</span>Publish</div>
+    </div>
+    <div id="ghFormPanel" style="display:none;">
+      <input type="text" id="ghOwner" placeholder="Repo owner" />
+      <input type="text" id="ghRepo" placeholder="Repo name" />
+      <input type="text" id="ghBranch" placeholder="Branch (default: main)" />
+      <input type="text" id="ghPath" placeholder="File path (default: levels.json)" />
+      <input type="password" id="ghToken" placeholder="Personal Access Token" />
+      <div class="btn" id="ghSaveBtn" style="margin:8px auto 0;">Save</div>
+    </div>
+    <div class="btn" id="loadPublishedBtn"><span class="icon">📥</span>Edit Published Level</div>
+    <div id="publishedListPanel" style="display:none;"></div>
+    <div id="validateResult"></div>
+    <textarea id="exportBox" style="display:none;" readonly></textarea>
+  </div>
+
+  <div id="featuredPanel" style="display:none;">
+    <div id="featuredNote"></div>
+    <div id="featuredList"></div>
+  </div>
+
+  <div id="status">Swipe, or tap any free cell in line, to move the marked O.</div>
+
+  <div id="controls">
+    <div class="btn" id="homeBtn"><span class="icon">🏠</span>Home</div>
+    <div class="btn" id="undoBtn"><span class="icon">↩</span>Undo</div>
+    <div class="btn" id="resetBtn"><span class="icon">⟳</span>Reset</div>
+    <div class="btn hintBtn" id="hintBtn"><span class="icon">💡</span>Hint</div>
+    <div class="btn" id="rulesBtn"><span class="icon">?</span>Rules</div>
+  </div>
+
+  <footer>TRIO SHIFT · ENDLESS MODE</footer>
+</div>
+
+<div id="myLevelsOverlay">
+  <div id="myLevelsCard">
+    <h2>My Levels</h2>
+    <div id="myLevelsList"></div>
+    <div class="btn secondary" id="closeMyLevels" style="margin:14px auto 0;">Close</div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="overlay-card">
+    <h2 id="overlay-title">Rules</h2>
+    <div id="starsRow" style="display:none;">
+      <span class="star" id="star1">★</span><span class="star" id="star2">★</span><span class="star" id="star3">★</span>
+    </div>
+    <div class="time" id="overlay-time" style="display:none;"></div>
+    <div id="statsGrid" style="display:none;"></div>
+    <p id="overlay-text"></p>
+    <div class="btn" id="overlay-primary">Got it</div>
+    <div class="btn secondary" id="overlay-secondary" style="display:none;">Watch Ad for +1 Heart</div>
+  </div>
+</div>
+
+<div id="adOverlay">
+  <div class="adbox">▶ Ad playing (simulated)</div>
+  <div class="adTimer" id="adTimerVal">3</div>
+</div>
+
+<script>
+let SIZE = 6;
+const WIN_LEN = 3;
+const MAX_HEARTS = 3;
+
+function hashStr(s){
+  let h = 1779033703 ^ s.length;
+  for(let i=0;i<s.length;i++){
+    h = Math.imul(h ^ s.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return h >>> 0;
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+}
+const NAME_A = ["Silent","Brass","Hollow","Amber","Quiet","Copper","Drifting","Hidden","Last","First","Slow","Golden"];
+const NAME_B = ["Ember","Hollow","Crossing","Hinge","Latch","Passage","Threshold","Tumbler","Corridor","Gate","Vault","Compass"];
+function puzzleName(seedVal){
+  const r = mulberry32(seedVal + 999);
+  return `${NAME_A[Math.floor(r()*NAME_A.length)]} ${NAME_B[Math.floor(r()*NAME_B.length)]}`;
+}
+
+function idx(r,c){ return r*SIZE+c; }
+function rc(i){ return [Math.floor(i/SIZE), i%SIZE]; }
+function inBounds(r,c){ return r>=0 && r<SIZE && c>=0 && c<SIZE; }
+
+function buildLines(){
+  const lines = [];
+  for(let r=0;r<SIZE;r++) for(let c=0;c<=SIZE-WIN_LEN;c++) lines.push([idx(r,c),idx(r,c+1),idx(r,c+2)]);
+  for(let c=0;c<SIZE;c++) for(let r=0;r<=SIZE-WIN_LEN;r++) lines.push([idx(r,c),idx(r+1,c),idx(r+2,c)]);
+  return lines;
+}
+let LINES_RC = buildLines();
+
+function checkO(board){
+  for(const [a,b,c] of LINES_RC) if(board[a]==='O'&&board[b]==='O'&&board[c]==='O') return [a,b,c];
+  return null;
+}
+function checkXFail(board){
+  for(const [a,b,c] of LINES_RC) if(board[a]==='X'&&board[b]==='X'&&board[c]==='X') return [a,b,c];
+  return null;
+}
+
+const DIRS = { up:[-1,0], down:[1,0], left:[0,-1], right:[0,1] };
+
+function pushMove(board, playerPos, dirKey){
+  const [dr,dc] = DIRS[dirKey];
+  const [r,c] = rc(playerPos);
+  const nr=r+dr, nc=c+dc;
+  if(!inBounds(nr,nc)) return null;
+  const target = idx(nr,nc);
+  if(board[target] === 'B') return null;
+  const nb = board.slice();
+  if(board[target] === 'X' || board[target] === 'O'){
+    const br = nr+dr, bc = nc+dc;
+    if(!inBounds(br,bc)) return null;
+    const beyond = idx(br,bc);
+    if(board[beyond] !== null) return null;
+    nb[beyond] = board[target]; nb[target] = 'O'; nb[playerPos] = null;
+    return { board: nb, playerPos: target };
+  }
+  return null; // empty handled by glide
+}
+
+function glideTargets(board, playerPos){
+  const visited = new Set([playerPos]);
+  const queue = [playerPos]; let qi=0;
+  while(qi<queue.length){
+    const cur = queue[qi++]; const [r,c] = rc(cur);
+    for(const k of Object.keys(DIRS)){
+      const [dr,dc]=DIRS[k]; const nr=r+dr,nc=c+dc;
+      if(!inBounds(nr,nc)) continue;
+      const ni = idx(nr,nc);
+      if(visited.has(ni)) continue;
+      if(board[ni] !== null) continue;
+      visited.add(ni); queue.push(ni);
+    }
+  }
+  visited.delete(playerPos);
+  return [...visited];
+}
+
+function bfsPath(board, start, target){
+  if(board[target] !== null) return null;
+  if(start === target) return null;
+  const cameFrom = new Map();
+  const visited = new Set([start]);
+  const queue = [start]; let qi=0;
+  while(qi<queue.length){
+    const cur = queue[qi++];
+    if(cur === target) break;
+    const [r,c] = rc(cur);
+    for(const k of Object.keys(DIRS)){
+      const [dr,dc] = DIRS[k]; const nr=r+dr, nc=c+dc;
+      if(!inBounds(nr,nc)) continue;
+      const ni = idx(nr,nc);
+      if(visited.has(ni)) continue;
+      if(board[ni] !== null) continue;
+      visited.add(ni); cameFrom.set(ni,cur); queue.push(ni);
+    }
+  }
+  if(!visited.has(target)) return null;
+  const path=[target]; let cur=target;
+  while(cur!==start){ cur=cameFrom.get(cur); path.push(cur); }
+  path.reverse(); return path;
+}
+
+// FIXED state key (previous bug: board.join('') collapsed nulls with no delimiter)
+function stateKey(board, playerPos){ return board.map(v=>v||'_').join('') + '#' + playerPos; }
+
+function solve(board, playerPos, maxDepth, maxStates){
+  let visited = new Set([stateKey(board,playerPos)]);
+  let frontier = [{board, playerPos}];
+  for(let depth=0; depth<maxDepth; depth++){
+    const next = [];
+    for(const st of frontier){
+      const targets = glideTargets(st.board, st.playerPos);
+      for(const t of targets){
+        const nb = st.board.slice(); nb[st.playerPos]=null; nb[t]='O';
+        const key = stateKey(nb, t);
+        if(visited.has(key)) continue;
+        visited.add(key);
+        if(visited.size > maxStates) return -1;
+        if(checkXFail(nb)) continue;
+        if(checkO(nb)) return depth+1;
+        next.push({board:nb, playerPos:t});
+      }
+      for(const dirKey of Object.keys(DIRS)){
+        const res = pushMove(st.board, st.playerPos, dirKey);
+        if(!res) continue;
+        const key = stateKey(res.board, res.playerPos);
+        if(visited.has(key)) continue;
+        visited.add(key);
+        if(visited.size > maxStates) return -1;
+        if(checkXFail(res.board)) continue;
+        if(checkO(res.board)) return depth+1;
+        next.push(res);
+      }
+    }
+    frontier = next;
+    if(frontier.length===0) break;
+  }
+  return -1;
+}
+
+// solve + reconstruct first action (for hints)
+function solveFirstAction(board, playerPos, maxDepth, maxStates){
+  const startKey = stateKey(board, playerPos);
+  let visited = new Map([[startKey, null]]);
+  let frontier = [{board, playerPos, key:startKey}];
+  for(let depth=0; depth<maxDepth; depth++){
+    const next = [];
+    for(const st of frontier){
+      const targets = glideTargets(st.board, st.playerPos);
+      for(const t of targets){
+        const nb = st.board.slice(); nb[st.playerPos]=null; nb[t]='O';
+        const key = stateKey(nb, t);
+        if(visited.has(key)) continue;
+        visited.set(key, {prevKey:st.key, action:{type:'glide', to:t}});
+        if(visited.size > maxStates) return null;
+        if(checkXFail(nb)) continue;
+        if(checkO(nb)) return firstAction(visited, key);
+        next.push({board:nb, playerPos:t, key});
+      }
+      for(const dirKey of Object.keys(DIRS)){
+        const res = pushMove(st.board, st.playerPos, dirKey);
+        if(!res) continue;
+        const key = stateKey(res.board, res.playerPos);
+        if(visited.has(key)) continue;
+        visited.set(key, {prevKey:st.key, action:{type:'push', dir:dirKey, to:res.playerPos}});
+        if(visited.size > maxStates) return null;
+        if(checkXFail(res.board)) continue;
+        if(checkO(res.board)) return firstAction(visited, key);
+        next.push({board:res.board, playerPos:res.playerPos, key});
+      }
+    }
+    frontier = next;
+    if(frontier.length===0) break;
+  }
+  return null;
+}
+function firstAction(visited, finalKey){
+  let cur = finalKey, action = null;
+  while(visited.get(cur) !== null){
+    const entry = visited.get(cur);
+    action = entry.action;
+    cur = entry.prevKey;
+  }
+  return action;
+}
+
+function generateCandidate(rand, X_COUNT, BLOCK_COUNT){
+  const cells = Array.from({length:SIZE*SIZE}, (_,i)=>i);
+  for(let i=cells.length-1;i>0;i--){ const j=Math.floor(rand()*(i+1)); [cells[i],cells[j]]=[cells[j],cells[i]]; }
+  let ptr = 0;
+  const board = Array(SIZE*SIZE).fill(null);
+  const statics = [cells[ptr++], cells[ptr++]];
+  board[statics[0]] = 'O'; board[statics[1]] = 'O';
+  let playerPos = cells[ptr++];
+  board[playerPos] = 'O';
+  if(checkO(board)) return null;
+  let bplaced = 0;
+  while(bplaced < BLOCK_COUNT && ptr < cells.length){ board[cells[ptr++]]='B'; bplaced++; }
+  let placed = 0;
+  while(placed < X_COUNT && ptr < cells.length){
+    const cell = cells[ptr++]; board[cell]='X';
+    if(checkXFail(board)){ board[cell]=null; continue; }
+    placed++;
+  }
+  if(placed < X_COUNT) return null;
+  return { board, playerPos };
+}
+
+function difficultyForLevel(level){
+  // Tier 1 (1-10): still a ramp, but no longer trivially easy.
+  if(level <= 10){
+    const size = level <= 3 ? 5 : 6;
+    const xCount = Math.min(5 + (level-1), 11);
+    const blockCount = level <= 2 ? 0 : Math.min(1 + Math.floor((level-3)/2), 4);
+    return { size, xCount, blockCount, tier:'gentle' };
+  }
+  // Tier 2 (11-30): moderate, steadier increase.
+  if(level <= 30){
+    const t = level - 11;
+    const size = 6 + Math.floor(t/10); // 6 then 7
+    const xCount = Math.min(7 + Math.floor(t/3), 12);
+    const blockCount = Math.min(1 + Math.floor(t/4), 5);
+    return { size, xCount, blockCount, tier:'moderate' };
+  }
+  // Tier 3 (31+): baseline keeps climbing with level; shuffle adds variance around
+  // that rising baseline instead of resetting difficulty back down.
+  const t3 = level - 31;
+  const baseSize  = Math.min(7 + Math.floor(t3/20), 9);
+  const baseX     = Math.min(14 + Math.floor(t3/6), 16);
+  const baseBlock = Math.min(6 + Math.floor(t3/8), 8);
+  const shuffleRand = mulberry32(hashStr('tier3shuffle:'+level))();
+  if(shuffleRand < 0.5){
+    return {
+      size: baseSize,
+      xCount: Math.max(9, baseX-3),
+      blockCount: Math.max(3, baseBlock-2),
+      tier:'easy-shuffle'
+    };
+  } else {
+    return {
+      size: Math.min(baseSize+1, 9),
+      xCount: Math.min(baseX+3, 18),
+      blockCount: Math.min(baseBlock+2, 10),
+      tier:'hard-shuffle'
+    };
+  }
+}
+
+function minMovesForLevel(level){
+  if(level <= 10) return Math.min(2 + Math.floor((level-1)/2), 5);
+  if(level <= 30) return Math.min(5 + Math.floor((level-11)/6), 7);
+  return 6; // tier 3 (shuffled) — demand a real multi-step solve, kept achievable within budget
+}
+
+function generateLevelPuzzle(level){
+  // Admin-authored levels (fetched into OFFICIAL_LEVELS) play first, in order.
+  // Once that list runs out, fall back to auto-generation as before.
+  if(OFFICIAL_LEVELS[level-1]){
+    const lvl = OFFICIAL_LEVELS[level-1];
+    SIZE = lvl.size; LINES_RC = buildLines();
+    const depth = solve(lvl.board, lvl.playerPos, 22, 200000);
+    return { board: lvl.board.slice(), playerPos: lvl.playerPos, seedVal: hashStr('official:'+level), size: SIZE, customName: lvl.name, parMoves: depth>0?depth:null };
+  }
+  const { size, xCount, blockCount } = difficultyForLevel(level);
+  const minMoves = minMovesForLevel(level);
+  SIZE = size;
+  LINES_RC = buildLines();
+  const seedBase = 'level:' + level;
+  let xC = xCount, bC = blockCount;
+  const genStart = Date.now();
+  let bestSoFar = null; // best (longest verified) candidate found, used if we never hit minMoves in time
+  for(let relax=0; relax<8; relax++){
+    for(let attempt=0; attempt<12; attempt++){
+      if(Date.now()-genStart > 7000) break;
+      const rand = mulberry32(hashStr(seedBase + ':' + relax + ':' + attempt));
+      const cand = generateCandidate(rand, xC, bC);
+      if(!cand) continue;
+      const depth = solve(cand.board, cand.playerPos, 20, 90000);
+      if(depth <= 0) continue;
+      if(!bestSoFar || depth > bestSoFar.depth) bestSoFar = { ...cand, depth };
+      if(depth >= minMoves) return { ...cand, seedVal: hashStr(seedBase), size: SIZE, parMoves: depth };
+    }
+    if(Date.now()-genStart > 7000) break;
+    xC = Math.max(4, xC-1); bC = Math.max(0, bC-1);
+  }
+  // couldn't hit the target minimum move count in time — use whichever solvable
+  // candidate had the LONGEST verified solution we found, rather than giving up.
+  if(bestSoFar) return { ...bestSoFar, seedVal: hashStr(seedBase), size: SIZE, parMoves: bestSoFar.depth };
+  // fallback stage 1: same grid size, scaled-down but still level-appropriate obstacles
+  // (never collapse straight to a trivial tiny board — that felt jarringly easy).
+  let fxC = Math.max(6, Math.floor(xCount*0.55));
+  let fbC = Math.max(2, Math.floor(blockCount*0.4));
+  for(let attempt=0; attempt<15; attempt++){
+    const rand = mulberry32(hashStr(seedBase + ':fb1:' + attempt));
+    const cand = generateCandidate(rand, fxC, fbC);
+    if(!cand) continue;
+    const depth = solve(cand.board, cand.playerPos, 15, 60000);
+    if(depth > 0) return { ...cand, seedVal: hashStr(seedBase), size: SIZE, parMoves: depth };
+  }
+  // fallback stage 2: same grid size, minimal obstacles — still non-trivial.
+  for(let attempt=0; attempt<15; attempt++){
+    const rand = mulberry32(hashStr(seedBase + ':fb2:' + attempt));
+    const cand = generateCandidate(rand, 5, 1);
+    if(!cand) continue;
+    const depth = solve(cand.board, cand.playerPos, 14, 40000);
+    if(depth > 0) return { ...cand, seedVal: hashStr(seedBase), size: SIZE, parMoves: depth };
+  }
+  // absolute last resort (should essentially never be reached)
+  const board = Array(SIZE*SIZE).fill(null);
+  board[idx(2,1)]='O'; board[idx(2,3)]='O';
+  const playerPos = idx(3,2);
+  board[playerPos]='O';
+  return { board, playerPos, seedVal: hashStr(seedBase), size: SIZE, parMoves: 1 };
+}
+
+// ---------- persistence (localStorage) ----------
+const LS_NAME = 'trioshift_playername';
+const LS_TOTAL_SCORE = 'trioshift_total_score';
+const LS_LEVELS_DONE = 'trioshift_levels_done';
+const LS_LEVEL_BEST_PREFIX = 'trioshift_level_best_';
+
+function getPlayerName(){ return localStorage.getItem(LS_NAME) || ''; }
+function setPlayerName(n){ localStorage.setItem(LS_NAME, n); }
+function getTotalScore(){ return parseInt(localStorage.getItem(LS_TOTAL_SCORE) || '0', 10); }
+function addTotalScore(n){ localStorage.setItem(LS_TOTAL_SCORE, String(getTotalScore()+n)); }
+function getLevelsDone(){ return parseInt(localStorage.getItem(LS_LEVELS_DONE) || '0', 10); }
+function incLevelsDone(){ localStorage.setItem(LS_LEVELS_DONE, String(getLevelsDone()+1)); }
+function getLevelBest(level){
+  const raw = localStorage.getItem(LS_LEVEL_BEST_PREFIX+level);
+  return raw ? JSON.parse(raw) : null;
+}
+function setLevelBest(level, entry){
+  localStorage.setItem(LS_LEVEL_BEST_PREFIX+level, JSON.stringify(entry));
+}
+const LS_CURRENT_LEVEL = 'trioshift_current_level';
+function getCurrentLevel(){ return parseInt(localStorage.getItem(LS_CURRENT_LEVEL) || '1', 10); }
+function setCurrentLevel(n){ localStorage.setItem(LS_CURRENT_LEVEL, String(n)); }
+function computeScore(moves, seconds){
+  return Math.max(50, Math.round(1000 - moves*15 - seconds*3));
+}
+function updateScoreBarUI(){
+  document.getElementById('totalScoreVal').textContent = getTotalScore();
+  document.getElementById('levelsDoneVal').textContent = getLevelsDone();
+}
+function updateLeaderRowUI(level){
+  const best = getLevelBest(level);
+  const row = document.getElementById('leaderRow');
+  if(best) row.innerHTML = `Shortest mover on this level: <b>${escapeHtml(best.name)}</b> — ${best.moves} moves`;
+  else row.textContent = 'Be the first to solve this level!';
+}
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function showRecordBanner(text){
+  const b = document.getElementById('recordBanner');
+  b.textContent = text;
+  b.classList.add('show');
+  setTimeout(()=> b.classList.remove('show'), 3200);
+}
+
+// ---------- game state ----------
+let state = null;
+const boardEl = document.getElementById('board');
+
+function buildBoardDOM(){
+  boardEl.style.gridTemplateColumns = `repeat(${SIZE}, minmax(${Math.max(24,Math.floor(280/SIZE))}px, ${Math.max(28,Math.floor(320/SIZE))}px))`;
+  boardEl.style.gridTemplateRows = `repeat(${SIZE}, minmax(${Math.max(24,Math.floor(280/SIZE))}px, ${Math.max(28,Math.floor(320/SIZE))}px))`;
+  boardEl.innerHTML = '';
+  for(let i=0;i<SIZE*SIZE;i++){
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.i = i;
+    cell.addEventListener('click', ()=> onCellTap(i));
+    boardEl.appendChild(cell);
+  }
+}
+
+function renderBoard(){
+  for(let i=0;i<SIZE*SIZE;i++){
+    const el = boardEl.children[i];
+    el.className = 'cell';
+    if(state.board[i]==='X') el.classList.add('x');
+    else if(state.board[i]==='B') el.classList.add('blocked');
+    else if(state.board[i]==='O'){
+      el.classList.add('o');
+      if(i===state.playerPos) el.classList.add('player');
+    }
+  }
+}
+
+function renderHearts(){
+  const el = document.getElementById('hearts');
+  el.innerHTML = '';
+  for(let i=0;i<MAX_HEARTS;i++){
+    const h = document.createElement('span');
+    h.className = 'heart' + (i < state.hearts ? '' : ' empty');
+    h.textContent = '❤';
+    el.appendChild(h);
+  }
+}
+
+function newLevel(level){
+  setCurrentLevel(level);
+  document.getElementById('status').textContent = 'Generating level ' + level + '...';
+  document.getElementById('levelLabel').textContent = 'Level ' + level;
+  setTimeout(()=>{
+    const { board, playerPos, seedVal, size, customName, parMoves } = generateLevelPuzzle(level);
+    const hearts = state ? state.hearts : MAX_HEARTS;
+    state = {
+      level, board: board.slice(), playerPos, size,
+      initialBoard: board.slice(), initialPlayerPos: playerPos,
+      history: [], moves: 0,
+      startTime: performance.now(), elapsed: 0, running: true, timerHandle: null,
+      seedVal, hearts, parMoves: parMoves || 1
+    };
+    document.getElementById('puzzleName').textContent = customName || puzzleName(seedVal);
+    document.getElementById('movesVal').textContent = '0';
+    document.getElementById('status').textContent = 'Swipe, or tap any free cell in line, to move the marked O.';
+    renderHearts();
+    updateScoreBarUI();
+    updateLeaderRowUI(level);
+    buildBoardDOM();
+    renderBoard();
+    startTimer();
+  }, 30);
+}
+
+function startTimer(){
+  stopTimer();
+  state.startTime = performance.now() - state.elapsed;
+  state.timerHandle = setInterval(()=>{
+    state.elapsed = performance.now() - state.startTime;
+    document.getElementById('timerVal').textContent = (state.elapsed/1000).toFixed(1);
+  }, 100);
+}
+function stopTimer(){ if(state && state.timerHandle){ clearInterval(state.timerHandle); state.timerHandle=null; } }
+
+function onCellTap(target){
+  if(!state.running) return;
+  if(justSwiped) return;
+  if(target === state.playerPos) return;
+  const path = bfsPath(state.board, state.playerPos, target);
+  if(!path) return;
+  commitMove(target, null);
+}
+
+function doDirection(dirKey){
+  if(!state.running) return;
+  const res = pushMove(state.board, state.playerPos, dirKey);
+  if(!res) return;
+  commitMove(res.playerPos, res.board);
+}
+
+function commitMove(newPos, newBoard){
+  state.history.push({ board: state.board.slice(), playerPos: state.playerPos });
+  if(newBoard){ state.board = newBoard; }
+  else { state.board[state.playerPos] = null; state.board[newPos] = 'O'; }
+  state.playerPos = newPos;
+  state.moves++;
+  document.getElementById('movesVal').textContent = state.moves;
+  renderBoard();
+  boardEl.children[newPos].classList.add('slide');
+
+  const fail = checkXFail(state.board);
+  if(fail){ endGame('X', fail); return; }
+  const win = checkO(state.board);
+  if(win){ endGame('O', win); return; }
+}
+
+function endGame(symbol, line){
+  state.running = false;
+  stopTimer();
+  line.forEach(i => boardEl.children[i].classList.add(symbol==='O' ? 'win':'fail'));
+  const overlay = document.getElementById('overlay');
+  const title = document.getElementById('overlay-title');
+  const timeEl = document.getElementById('overlay-time');
+  const text = document.getElementById('overlay-text');
+  const primary = document.getElementById('overlay-primary');
+  const secondary = document.getElementById('overlay-secondary');
+  const starsRow = document.getElementById('starsRow');
+  const statsGrid = document.getElementById('statsGrid');
+  timeEl.style.display='none';
+  secondary.style.display = 'none';
+  starsRow.style.display = 'none';
+  statsGrid.style.display = 'none';
+
+  if(symbol==='O'){
+    const seconds = state.elapsed/1000;
+    if(state.level === null){
+      // custom level — no auto-progression, no global leaderboard entry
+      title.textContent='Solved!'; title.className='win';
+      text.textContent = `"${state.customName}" clear — three O in a line, in ${state.moves} moves.`;
+      primary.textContent='Back to Levels';
+      document.getElementById('status').textContent = 'Custom level solved.';
+      primary.onclick = ()=>{ overlay.classList.remove('show'); showHomeScreen(); };
+    } else {
+      const score = computeScore(state.moves, seconds);
+      addTotalScore(score);
+      incLevelsDone();
+      const prevBest = getLevelBest(state.level);
+      const isNewRecord = !prevBest || state.moves < prevBest.moves;
+      if(isNewRecord){
+        setLevelBest(state.level, { name: getPlayerName() || 'Player', moves: state.moves, seconds });
+      }
+      updateScoreBarUI();
+      updateLeaderRowUI(state.level);
+
+      // star rating + difficulty label: based on this puzzle's actual verified
+      // minimum solution length, not the level number (avoids mislabeling an
+      // easy fallback puzzle as "Hard" just because of a high level number).
+      const par = state.parMoves || Math.max(2, Math.round(state.moves*0.7));
+      const ratio = state.moves / Math.max(1, par);
+      const starCount = ratio <= 1.15 ? 3 : ratio <= 1.6 ? 2 : 1;
+      starsRow.style.display = 'flex';
+      [1,2,3].forEach(n => document.getElementById('star'+n).classList.toggle('lit', n<=starCount));
+
+      const diffLabel = par<=4 ? 'Easy' : par<=8 ? 'Normal' : 'Hard';
+      const mm = Math.floor(seconds/60), ss = Math.floor(seconds%60);
+      statsGrid.style.display = 'grid';
+      statsGrid.innerHTML = `
+        <div class="label">Difficulty</div><div class="value">${diffLabel}</div>
+        <div class="label">Time</div><div class="value">${mm}:${String(ss).padStart(2,'0')}</div>
+        <div class="label">Score</div><div class="value">+${score}</div>
+        <div class="label">Moves</div><div class="value">${state.moves}</div>
+      `;
+
+      title.textContent='Well Done!'; title.className='win';
+      text.textContent = '';
+      primary.textContent='Next Level';
+      secondary.style.display = 'block';
+      secondary.textContent = 'Home';
+      secondary.onclick = ()=>{ overlay.classList.remove('show'); showHomeScreen(); };
+      document.getElementById('status').textContent = 'Solved.';
+      primary.onclick = ()=>{
+        overlay.classList.remove('show');
+        if(isNewRecord){
+          showRecordBanner(`🏆 ${getPlayerName()||'Player'} is the shortest mover on Level ${state.level}! (${state.moves} moves) 🏆`);
+        }
+        newLevel(state.level+1);
+      };
+    }
+  } else {
+    timeEl.style.display='block';
+    timeEl.textContent = (state.elapsed/1000).toFixed(1)+'s';
+    state.hearts = Math.max(0, state.hearts-1);
+    renderHearts();
+    if(state.hearts > 0){
+      title.textContent='Failed'; title.className='fail';
+      text.textContent = `Three X lined up. ${state.hearts} heart${state.hearts===1?'':'s'} left. Try this level again.`;
+      primary.textContent='Retry';
+      document.getElementById('status').textContent = 'Failed — reset to try again.';
+      primary.onclick = ()=>{ overlay.classList.remove('show'); resetLevel(); };
+    } else {
+      title.textContent='Out of Hearts'; title.className='fail';
+      text.textContent = `No hearts left. Watch an ad to refill and keep going.`;
+      primary.textContent='Watch Ad';
+      document.getElementById('status').textContent = 'Out of hearts.';
+      primary.onclick = ()=>{ overlay.classList.remove('show'); playAd(()=>{ state.hearts = MAX_HEARTS; renderHearts(); resetLevel(); }); };
+    }
+  }
+  overlay.classList.add('show');
+}
+
+function undo(){
+  if(!state.running || state.history.length===0) return;
+  const last = state.history.pop();
+  state.board = last.board; state.playerPos = last.playerPos;
+  state.moves = Math.max(0, state.moves-1);
+  document.getElementById('movesVal').textContent = state.moves;
+  renderBoard();
+}
+
+function resetLevel(){
+  state.board = state.initialBoard.slice();
+  state.playerPos = state.initialPlayerPos;
+  state.history = []; state.moves = 0; state.elapsed = 0; state.running = true;
+  document.getElementById('movesVal').textContent = '0';
+  document.getElementById('timerVal').textContent = '00.0';
+  document.getElementById('status').textContent = 'Swipe, or tap any free cell in line, to move the marked O.';
+  renderBoard();
+  startTimer();
+}
+
+function playAd(onDone){
+  const adOverlay = document.getElementById('adOverlay');
+  const adTimerVal = document.getElementById('adTimerVal');
+  let t = 3;
+  adTimerVal.textContent = t;
+  adOverlay.classList.add('show');
+  const iv = setInterval(()=>{
+    t--;
+    if(t <= 0){
+      clearInterval(iv);
+      adOverlay.classList.remove('show');
+      onDone();
+    } else {
+      adTimerVal.textContent = t;
+    }
+  }, 1000);
+}
+
+function useHint(){
+  if(!state.running) return;
+  playAd(()=>{
+    const action = solveFirstAction(state.board, state.playerPos, 14, 80000);
+    if(!action){
+      document.getElementById('status').textContent = 'No hint available right now.';
+      return;
+    }
+    const targetCell = action.to;
+    boardEl.children[targetCell].classList.add('hint');
+    setTimeout(()=> boardEl.children[targetCell] && boardEl.children[targetCell].classList.remove('hint'), 2200);
+    document.getElementById('status').textContent = action.type==='push'
+      ? `Hint: push ${action.dir}.`
+      : `Hint: move to the glowing cell.`;
+  });
+}
+
+document.addEventListener('keydown', (e)=>{
+  const map = { ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right' };
+  if(map[e.key]) doDirection(map[e.key]);
+});
+
+let touchStart = null;
+let justSwiped = false;
+boardEl.addEventListener('touchstart', (e)=>{
+  const t = e.changedTouches[0]; touchStart = { x:t.clientX, y:t.clientY };
+}, {passive:true});
+boardEl.addEventListener('touchend', (e)=>{
+  if(!touchStart) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
+  const absX = Math.abs(dx), absY = Math.abs(dy);
+  if(Math.max(absX,absY) < 24){ touchStart=null; return; }
+  justSwiped = true;
+  if(absX > absY) doDirection(dx>0?'right':'left'); else doDirection(dy>0?'down':'up');
+  touchStart = null;
+  setTimeout(()=>{ justSwiped=false; }, 50);
+}, {passive:true});
+
+let mouseStart = null;
+boardEl.addEventListener('mousedown', (e)=>{ mouseStart = { x:e.clientX, y:e.clientY }; });
+window.addEventListener('mouseup', (e)=>{
+  if(!mouseStart) return;
+  const dx = e.clientX - mouseStart.x, dy = e.clientY - mouseStart.y;
+  const absX = Math.abs(dx), absY = Math.abs(dy);
+  mouseStart = null;
+  if(Math.max(absX,absY) < 24) return;
+  justSwiped = true;
+  if(absX > absY) doDirection(dx>0?'right':'left'); else doDirection(dy>0?'down':'up');
+  setTimeout(()=>{ justSwiped=false; }, 50);
+});
+
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('resetBtn').addEventListener('click', resetLevel);
+document.getElementById('hintBtn').addEventListener('click', useHint);
+document.getElementById('rulesBtn').addEventListener('click', ()=>{
+  document.getElementById('overlay-title').textContent='Rules';
+  document.getElementById('overlay-title').className='';
+  document.getElementById('overlay-time').style.display='none';
+  document.getElementById('overlay-secondary').style.display='none';
+  document.getElementById('overlay-text').textContent =
+    'One O is marked — that\'s the piece you move. Swipe, or tap any cell in a free straight line, to slide it there. It pushes a single X or O forward if there\'s empty space behind it. Blocked cells (dark gaps) can\'t be entered. Line up three O in a row or column to solve — three X in a row or column fails you and costs a heart. Run out of hearts and you\'ll need to watch an ad to refill. Hints (also ad-gated) show your next best move. Levels go on forever, each one a bit harder.';
+  document.getElementById('overlay-primary').textContent='Got it';
+  document.getElementById('overlay-primary').onclick = ()=> document.getElementById('overlay').classList.remove('show');
+  document.getElementById('overlay').classList.add('show');
+});
+
+// ---------- official / featured levels (fetched remotely, so new levels reach
+// already-installed players without needing a Play Store update) ----------
+// Set this to a raw JSON file URL (e.g. a GitHub raw link). The file should contain
+// a JSON array of { name, size, board, playerPos } objects — exactly what "Export Code"
+// produces, wrapped in [ ... ].
+const FEATURED_LEVELS_URL = 'https://raw.githubusercontent.com/acryfusion-code/XO-Game/refs/heads/main/levels.json';
+const LS_FEATURED_CACHE = 'trioshift_featured_cache';
+let OFFICIAL_LEVELS = [];
+
+function loadCachedFeatured(){
+  const raw = localStorage.getItem(LS_FEATURED_CACHE);
+  return raw ? JSON.parse(raw) : [];
+}
+async function refreshFeaturedLevels(){
+  const cached = loadCachedFeatured();
+  if(cached.length > 0) OFFICIAL_LEVELS = cached; // only override baked-in defaults if we actually have cached data
+  if(!FEATURED_LEVELS_URL) return;
+  try{
+    const res = await fetch(FEATURED_LEVELS_URL, {cache:'no-store'});
+    if(!res.ok) return;
+    const data = await res.json();
+    if(Array.isArray(data)){
+      OFFICIAL_LEVELS = data;
+      localStorage.setItem(LS_FEATURED_CACHE, JSON.stringify(data));
+      if(appMode==='featured') renderFeaturedList();
+      // if the current in-progress level (no moves made yet) now has an official
+      // version available that we didn't have at load time, swap to it.
+      if(appMode==='play' && state && state.level && state.moves===0 && OFFICIAL_LEVELS[state.level-1]){
+        newLevel(state.level);
+      }
+    }
+  }catch(e){ /* offline or unreachable — cached list already shown */ }
+}
+
+let editingPublishedIndex = null;
+
+function renderPublishedList(){
+  const panel = document.getElementById('publishedListPanel');
+  const s = loadGhSettings();
+  if(!s.owner || !s.repo || !s.token){
+    panel.innerHTML = '<div class="pubRow">Fill in GitHub settings first.</div>';
+    panel.style.display = 'flex';
+    return;
+  }
+  panel.innerHTML = '<div class="pubRow">Loading published levels...</div>';
+  panel.style.display = 'flex';
+  const api = `https://api.github.com/repos/${s.owner}/${s.repo}/contents/${s.path}`;
+  const headers = { 'Authorization': 'Bearer ' + s.token, 'Accept': 'application/vnd.github+json' };
+  fetch(`${api}?ref=${encodeURIComponent(s.branch||'main')}`, { headers })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('GET '+r.status)))
+    .then(info => {
+      const list = JSON.parse(decodeURIComponent(escape(atob(info.content.replace(/\n/g,'')))));
+      panel.innerHTML = '';
+      if(!Array.isArray(list) || list.length===0){
+        panel.innerHTML = '<div class="pubRow">No published levels yet.</div>';
+        return;
+      }
+      list.forEach((lvl, i)=>{
+        const row = document.createElement('div');
+        row.className = 'pubRow';
+        row.innerHTML = `<span>${i+1}. ${escapeHtml(lvl.name)} (${lvl.size}x${lvl.size})</span>`;
+        const editBtn = document.createElement('div');
+        editBtn.className = 'btn'; editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', ()=>{
+          editingPublishedIndex = i;
+          SIZE = lvl.size; LINES_RC = buildLines();
+          editorState = { size: lvl.size, board: lvl.board.slice(), playerPos: lvl.playerPos, settingPlayer:false };
+          document.getElementById('editorSizeVal').textContent = SIZE;
+          buildEditorDOM(); renderEditor();
+          document.getElementById('validateResult').textContent = `Editing "${lvl.name}" (level ${i+1}). Make changes, then Publish to overwrite it.`;
+          document.getElementById('validateResult').className = 'ok';
+          panel.style.display = 'none';
+        });
+        row.appendChild(editBtn);
+        panel.appendChild(row);
+      });
+    })
+    .catch(e => { panel.innerHTML = `<div class="pubRow">✗ ${e.message}</div>`; });
+}
+document.getElementById('loadPublishedBtn').addEventListener('click', ()=>{
+  const panel = document.getElementById('publishedListPanel');
+  if(panel.style.display === 'none' || !panel.style.display) renderPublishedList();
+  else panel.style.display = 'none';
+});
+
+// ---------- level editor ----------
+let appMode = 'play';
+let editorState = null;
+
+function initEditor(size){
+  editorState = { size, board: Array(size*size).fill(null), playerPos: null, settingPlayer: false };
+  SIZE = size; LINES_RC = buildLines();
+  document.getElementById('editorSizeVal').textContent = size;
+  buildEditorDOM();
+  renderEditor();
+  document.getElementById('validateResult').textContent = '';
+  document.getElementById('validateResult').className = '';
+  document.getElementById('exportBox').style.display = 'none';
+}
+
+function buildEditorDOM(){
+  boardEl.style.gridTemplateColumns = `repeat(${SIZE}, minmax(${Math.max(24,Math.floor(280/SIZE))}px, ${Math.max(28,Math.floor(320/SIZE))}px))`;
+  boardEl.style.gridTemplateRows = `repeat(${SIZE}, minmax(${Math.max(24,Math.floor(280/SIZE))}px, ${Math.max(28,Math.floor(320/SIZE))}px))`;
+  boardEl.innerHTML = '';
+  for(let i=0;i<SIZE*SIZE;i++){
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.i = i;
+    cell.addEventListener('click', ()=> onEditorCellClick(i));
+    boardEl.appendChild(cell);
+  }
+}
+
+function renderEditor(){
+  for(let i=0;i<SIZE*SIZE;i++){
+    const el = boardEl.children[i];
+    el.className = 'cell';
+    const v = editorState.board[i];
+    if(v==='X') el.classList.add('x');
+    else if(v==='B') el.classList.add('blocked');
+    else if(v==='O'){ el.classList.add('o'); if(i===editorState.playerPos) el.classList.add('player'); }
+  }
+}
+
+function onEditorCellClick(i){
+  if(editorState.settingPlayer){
+    if(editorState.board[i] !== 'O') editorState.board[i] = 'O';
+    editorState.playerPos = i;
+    editorState.settingPlayer = false;
+    document.getElementById('setPlayerBtn').classList.remove('active');
+    renderEditor();
+    return;
+  }
+  const cur = editorState.board[i];
+  let next;
+  if(cur === null) next = 'X';
+  else if(cur === 'X') next = 'O';
+  else if(cur === 'O') next = 'B';
+  else next = null;
+  if(cur === 'O' && editorState.playerPos === i) editorState.playerPos = null;
+  editorState.board[i] = next;
+  renderEditor();
+}
+
+function setMode(mode){
+  appMode = mode;
+  document.getElementById('playModeBtn').classList.toggle('active', mode==='play');
+  document.getElementById('featuredModeBtn').classList.toggle('active', mode==='featured');
+  document.getElementById('createModeBtn').classList.toggle('active', mode==='create');
+  document.getElementById('editorPanel').style.display = mode==='create' ? 'flex' : 'none';
+  document.getElementById('featuredPanel').style.display = mode==='featured' ? 'block' : 'none';
+  document.getElementById('board-wrap').style.display = (mode==='create'||mode==='play') ? 'block' : 'none';
+  document.getElementById('hud').style.display = mode==='play' ? 'flex' : 'none';
+  document.getElementById('scoreBar').style.display = mode==='play' ? 'flex' : 'none';
+  document.getElementById('leaderRow').style.display = mode==='play' ? 'block' : 'none';
+  document.getElementById('controls').style.display = mode==='play' ? 'flex' : 'none';
+  if(mode==='create'){
+    stopTimer();
+    if(!editorState) initEditor(6); else { SIZE = editorState.size; LINES_RC = buildLines(); buildEditorDOM(); renderEditor(); }
+    document.getElementById('status').textContent = 'Design a level, then Validate and Export Code.';
+  } else if(mode==='featured'){
+    stopTimer();
+    document.getElementById('featuredNote').textContent = FEATURED_LEVELS_URL
+      ? 'Synced from the shared levels list.'
+      : 'Remote levels URL not configured yet — showing locally cached levels only.';
+    renderFeaturedList();
+    refreshFeaturedLevels();
+    document.getElementById('status').textContent = 'Hand-picked levels, same for every player.';
+  } else {
+    if(state){
+      SIZE = state.size || SIZE; LINES_RC = buildLines();
+      buildBoardDOM(); renderBoard();
+      if(state.running) startTimer();
+      document.getElementById('status').textContent = 'Swipe, or tap any free cell in line, to move the marked O.';
+    }
+  }
+}
+
+function renderFeaturedList(){
+  const el = document.getElementById('featuredList');
+  el.innerHTML = '';
+  OFFICIAL_LEVELS.forEach((lvl, i)=>{
+    const row = document.createElement('div');
+    row.className = 'featuredRow';
+    row.innerHTML = `<div class="info"><b>${escapeHtml(lvl.name)}</b><span>${lvl.size}x${lvl.size} grid</span></div>`;
+    const playBtn = document.createElement('div');
+    playBtn.className = 'btn'; playBtn.textContent = 'Play';
+    playBtn.addEventListener('click', ()=> playCustomLevel(lvl));
+    row.appendChild(playBtn);
+    el.appendChild(row);
+  });
+}
+
+function validateEditorLevel(){
+  const result = document.getElementById('validateResult');
+  if(editorState.playerPos === null){
+    result.textContent = 'Set a player O first (tap "Set Player", then tap an O).';
+    result.className = 'bad';
+    return;
+  }
+  result.textContent = 'Checking (this can take a few seconds for big/complex boards)...';
+  result.className = '';
+  setTimeout(()=>{
+    const depth = solve(editorState.board, editorState.playerPos, 26, 450000);
+    if(depth > 0){
+      result.textContent = `✓ Solvable in ${depth} moves minimum.`;
+      result.className = 'ok';
+    } else {
+      result.textContent = '✗ No solution found within the search limit. It might still be solvable with a longer sequence — try "Test Play" to check yourself, or simplify the board.';
+      result.className = 'bad';
+    }
+  }, 30);
+}
+
+function testPlayEditorLevel(){
+  if(editorState.playerPos === null){
+    document.getElementById('validateResult').textContent = 'Set a player O first.';
+    document.getElementById('validateResult').className = 'bad';
+    return;
+  }
+  playCustomLevel({ name: 'Test Play', size: editorState.size, board: editorState.board.slice(), playerPos: editorState.playerPos });
+}
+
+const LS_CUSTOM_LEVELS = 'trioshift_custom_levels';
+function getCustomLevels(){
+  const raw = localStorage.getItem(LS_CUSTOM_LEVELS);
+  return raw ? JSON.parse(raw) : [];
+}
+function saveCustomLevels(list){ localStorage.setItem(LS_CUSTOM_LEVELS, JSON.stringify(list)); }
+
+function exportEditorLevel(){
+  if(editorState.playerPos === null){
+    document.getElementById('validateResult').textContent = 'Set a player O before exporting.';
+    document.getElementById('validateResult').className = 'bad';
+    return;
+  }
+  const name = (window.prompt('Name this level:', 'My Level') || '').trim().slice(0,24) || 'My Level';
+  const obj = { name, size: editorState.size, board: editorState.board, playerPos: editorState.playerPos };
+  const list = getCustomLevels();
+  list.push({ id: Date.now(), ...obj, createdBy: getPlayerName()||'Player' });
+  saveCustomLevels(list);
+  const box = document.getElementById('exportBox');
+  box.style.display = 'block';
+  box.value = JSON.stringify(obj);
+  box.select();
+  document.getElementById('validateResult').textContent = 'Copy this code — add it to your levels.json array on GitHub, and every player picks it up automatically next time they open the app.';
+  document.getElementById('validateResult').className = 'ok';
+}
+
+// ---------- GitHub settings + direct publish (same file, no separate tool needed) ----------
+const LS_GH = 'trioshift_gh_settings';
+function loadGhSettings(){
+  const raw = localStorage.getItem(LS_GH);
+  return raw ? JSON.parse(raw) : { owner:'', repo:'', branch:'main', path:'levels.json', token:'' };
+}
+function saveGhSettings(s){ localStorage.setItem(LS_GH, JSON.stringify(s)); }
+function b64EncodeUnicode(str){ return btoa(unescape(encodeURIComponent(str))); }
+
+function fillGhForm(){
+  const s = loadGhSettings();
+  document.getElementById('ghOwner').value = s.owner || '';
+  document.getElementById('ghRepo').value = s.repo || '';
+  document.getElementById('ghBranch').value = s.branch || '';
+  document.getElementById('ghPath').value = s.path || '';
+  document.getElementById('ghToken').value = s.token || '';
+}
+
+async function publishEditorLevel(){
+  const result = document.getElementById('validateResult');
+  if(editorState.playerPos === null){
+    result.textContent = 'Set a player O before publishing.'; result.className = 'bad'; return;
+  }
+  const s = loadGhSettings();
+  if(!s.owner || !s.repo || !s.token){
+    result.textContent = 'Fill in GitHub settings (owner, repo, token) first.';
+    result.className = 'bad';
+    document.getElementById('ghFormPanel').style.display = 'flex';
+    return;
+  }
+  if(location.protocol === 'file:'){
+    result.textContent = '✗ This page is open as a local file (file://). Browsers block API requests from local files. Host this file (e.g. GitHub Pages, Netlify, or open it through the Android app) and try again from there.';
+    result.className = 'bad';
+    return;
+  }
+
+  result.textContent = 'Publishing...'; result.className = '';
+  const api = `https://api.github.com/repos/${s.owner}/${s.repo}/contents/${s.path}`;
+  const headers = { 'Authorization': 'Bearer ' + s.token, 'Accept': 'application/vnd.github+json' };
+  try{
+    let sha = undefined, existing = [];
+    const getRes = await fetch(`${api}?ref=${encodeURIComponent(s.branch||'main')}`, { headers });
+    if(getRes.status === 200){
+      const info = await getRes.json();
+      sha = info.sha;
+      try{ existing = JSON.parse(decodeURIComponent(escape(atob(info.content.replace(/\n/g,''))))); }catch(e){ existing = []; }
+    } else if(getRes.status !== 404){
+      const err = await getRes.json().catch(()=>({}));
+      throw new Error(`GET ${getRes.status}: ` + (err.message || 'request failed'));
+    }
+    if(!Array.isArray(existing)) existing = [];
+
+    const isEdit = editingPublishedIndex !== null && existing[editingPublishedIndex];
+    const defaultName = isEdit ? existing[editingPublishedIndex].name : ('Level ' + (existing.length+1));
+    const name = (window.prompt('Name this level:', defaultName) || '').trim().slice(0,24) || defaultName;
+    const newLevelObj = { name, size: editorState.size, board: editorState.board, playerPos: editorState.playerPos };
+
+    if(isEdit){
+      existing[editingPublishedIndex] = newLevelObj;
+    } else {
+      existing.push(newLevelObj);
+    }
+    const content = JSON.stringify(existing, null, 2);
+    const putRes = await fetch(api, {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: isEdit ? `Update level "${name}" (slot ${editingPublishedIndex+1}) via Trio Shift admin editor`
+                         : `Add level "${name}" via Trio Shift admin editor`,
+        content: b64EncodeUnicode(content),
+        branch: s.branch || 'main',
+        ...(sha ? { sha } : {})
+      })
+    });
+    if(!putRes.ok){
+      const err = await putRes.json().catch(()=>({}));
+      throw new Error(`PUT ${putRes.status}: ` + (err.message || 'request failed'));
+    }
+    result.textContent = isEdit
+      ? `✓ Updated "${name}" (level ${editingPublishedIndex+1}).`
+      : `✓ Published "${name}" — now level ${existing.length} for everyone.`;
+    result.className = 'ok';
+    editingPublishedIndex = null;
+  }catch(e){
+    if(e instanceof TypeError){
+      result.textContent = '✗ Network request blocked or failed. If this page is open from a local file, host it online first. Otherwise check your internet connection.';
+    } else {
+      result.textContent = '✗ ' + e.message;
+    }
+    result.className = 'bad';
+  }
+}
+
+function renderMyLevelsList(){
+  const list = getCustomLevels();
+  const el = document.getElementById('myLevelsList');
+  el.innerHTML = '';
+  list.slice().reverse().forEach(lvl=>{
+    const row = document.createElement('div');
+    row.className = 'myLevelRow';
+    row.innerHTML = `<div class="info"><b>${escapeHtml(lvl.name)}</b>${lvl.size}x${lvl.size} · by ${escapeHtml(lvl.createdBy||'Player')}</div>`;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const playBtn = document.createElement('div');
+    playBtn.className = 'btn'; playBtn.textContent = 'Play';
+    playBtn.addEventListener('click', ()=>{ playCustomLevel(lvl); document.getElementById('myLevelsOverlay').classList.remove('show'); });
+    const delBtn = document.createElement('div');
+    delBtn.className = 'btn'; delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', ()=>{
+      const updated = getCustomLevels().filter(x=>x.id!==lvl.id);
+      saveCustomLevels(updated);
+      renderMyLevelsList();
+    });
+    actions.appendChild(playBtn); actions.appendChild(delBtn);
+    row.appendChild(actions);
+    el.appendChild(row);
+  });
+}
+
+function playCustomLevel(lvl){
+  SIZE = lvl.size; LINES_RC = buildLines();
+  const hearts = state ? state.hearts : MAX_HEARTS;
+  state = {
+    level: null, customName: lvl.name, size: SIZE,
+    board: lvl.board.slice(), playerPos: lvl.playerPos,
+    initialBoard: lvl.board.slice(), initialPlayerPos: lvl.playerPos,
+    history: [], moves: 0,
+    startTime: performance.now(), elapsed: 0, running: true, timerHandle: null,
+    seedVal: 0, hearts
+  };
+  document.getElementById('levelLabel').textContent = 'Featured';
+  document.getElementById('puzzleName').textContent = lvl.name;
+  document.getElementById('movesVal').textContent = '0';
+  renderHearts();
+  setMode('play');
+}
+
+document.getElementById('playModeBtn').addEventListener('click', ()=> setMode('play'));
+document.getElementById('featuredModeBtn').addEventListener('click', ()=> setMode('featured'));
+document.getElementById('createModeBtn').addEventListener('click', ()=> setMode('create'));
+document.getElementById('myLevelsBtn').addEventListener('click', ()=>{
+  renderMyLevelsList();
+  document.getElementById('myLevelsOverlay').classList.add('show');
+});
+document.getElementById('closeMyLevels').addEventListener('click', ()=>{
+  document.getElementById('myLevelsOverlay').classList.remove('show');
+});
+document.getElementById('sizeMinus').addEventListener('click', ()=>{
+  if(!editorState) return;
+  const ns = Math.max(4, editorState.size-1);
+  initEditor(ns);
+});
+document.getElementById('sizePlus').addEventListener('click', ()=>{
+  if(!editorState) return;
+  const ns = Math.min(10, editorState.size+1);
+  initEditor(ns);
+});
+document.getElementById('setPlayerBtn').addEventListener('click', (e)=>{
+  editorState.settingPlayer = !editorState.settingPlayer;
+  e.currentTarget.classList.toggle('active', editorState.settingPlayer);
+});
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  editorState.board = Array(editorState.size*editorState.size).fill(null);
+  editorState.playerPos = null;
+  editingPublishedIndex = null;
+  renderEditor();
+  document.getElementById('validateResult').textContent = '';
+  document.getElementById('validateResult').className = '';
+  document.getElementById('exportBox').style.display = 'none';
+});
+document.getElementById('validateBtn').addEventListener('click', validateEditorLevel);
+document.getElementById('testPlayBtn').addEventListener('click', testPlayEditorLevel);
+document.getElementById('exportBtn').addEventListener('click', exportEditorLevel);
+document.getElementById('ghSettingsToggleBtn').addEventListener('click', ()=>{
+  const f = document.getElementById('ghFormPanel');
+  if(f.style.display === 'none'){ fillGhForm(); f.style.display = 'flex'; }
+  else f.style.display = 'none';
+});
+document.getElementById('ghSaveBtn').addEventListener('click', ()=>{
+  saveGhSettings({
+    owner: document.getElementById('ghOwner').value.trim(),
+    repo: document.getElementById('ghRepo').value.trim(),
+    branch: document.getElementById('ghBranch').value.trim() || 'main',
+    path: document.getElementById('ghPath').value.trim() || 'levels.json',
+    token: document.getElementById('ghToken').value.trim()
+  });
+  document.getElementById('validateResult').textContent = 'GitHub settings saved.';
+  document.getElementById('validateResult').className = 'ok';
+});
+document.getElementById('publishBtn').addEventListener('click', publishEditorLevel);
+refreshFeaturedLevels();
+
+// hidden admin unlock: tap the title 5x within 2s to reveal Create / My Levels
+let titleTapCount = 0, titleTapTimer = null;
+document.getElementById('titleTap').addEventListener('click', ()=>{
+  titleTapCount++;
+  clearTimeout(titleTapTimer);
+  titleTapTimer = setTimeout(()=>{ titleTapCount = 0; }, 2000);
+  if(titleTapCount >= 5){
+    titleTapCount = 0;
+    document.getElementById('createModeBtn').style.display = 'flex';
+    document.getElementById('myLevelsBtn').style.display = 'flex';
+    document.getElementById('status').textContent = 'Admin tools unlocked.';
+  }
+});
+
+// ---------- home screen ----------
+function renderLevelTrack(){
+  const current = getCurrentLevel();
+  const track = document.getElementById('levelTrack');
+  track.innerHTML = '';
+  const start = Math.max(1, current - 2);
+  for(let lv = start; lv <= start + 4; lv++){
+    const dot = document.createElement('div');
+    dot.className = 'levelDot' + (lv===current ? ' current' : lv<current ? ' done' : '');
+    dot.textContent = lv;
+    dot.addEventListener('click', ()=>{ setCurrentLevel(lv); renderLevelTrack(); document.getElementById('homePlayLabel').textContent = 'Play Level ' + lv; });
+    track.appendChild(dot);
+  }
+  document.getElementById('homePlayLabel').textContent = 'Play Level ' + current;
+}
+
+function showHomeScreen(){
+  stopTimer();
+  document.getElementById('homeScreen').style.display = 'flex';
+  document.getElementById('topbar').style.display = 'none';
+  document.getElementById('modeBar').style.display = 'none';
+  document.getElementById('scoreBar').style.display = 'none';
+  document.getElementById('leaderRow').style.display = 'none';
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('board-wrap').style.display = 'none';
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('controls').style.display = 'none';
+  document.getElementById('editorPanel').style.display = 'none';
+  document.getElementById('featuredPanel').style.display = 'none';
+  document.getElementById('homeScoreVal').textContent = getTotalScore();
+  renderLevelTrack();
+}
+
+function showGameScreen(){
+  document.getElementById('homeScreen').style.display = 'none';
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('modeBar').style.display = 'flex';
+  document.getElementById('board-wrap').style.display = 'block';
+  document.getElementById('status').style.display = 'block';
+  document.getElementById('controls').style.display = 'flex';
+  setMode('play');
+}
+
+document.getElementById('homePlayBtn').addEventListener('click', ()=>{
+  const lv = getCurrentLevel();
+  showGameScreen();
+  newLevel(lv);
+});
+document.getElementById('homeBtn').addEventListener('click', ()=>{
+  showHomeScreen();
+});
+
+showHomeScreen();
+
+// player name capture
+(function(){
+  const existing = getPlayerName();
+  const overlay = document.getElementById('nameOverlay');
+  if(existing){
+    updateScoreBarUI();
+    return;
+  }
+  overlay.classList.add('show');
+  const input = document.getElementById('nameInput');
+  const submit = document.getElementById('nameSubmit');
+  function go(){
+    const v = (input.value || '').trim().slice(0,16) || 'Player';
+    setPlayerName(v);
+    overlay.classList.remove('show');
+    updateScoreBarUI();
+  }
+  submit.addEventListener('click', go);
+  input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') go(); });
+})();
+</script>
+</body>
+</html>
