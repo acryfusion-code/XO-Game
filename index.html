@@ -24,6 +24,8 @@
     color:var(--ivory);
     overflow-x:hidden;
     user-select:none;
+    overscroll-behavior:none;
+    touch-action:pan-x pan-y;
   }
   #app{
     display:flex; flex-direction:column; align-items:center;
@@ -184,7 +186,7 @@
     box-shadow:0 22px 46px -18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
     border:1px solid rgba(217,164,65,0.15);
   }
-  #board{ display:grid; gap:4px; }
+  #board{ display:grid; gap:4px; touch-action:none; }
   .cell{
     background:var(--cell);
     border-radius:8px;
@@ -1076,19 +1078,33 @@ document.addEventListener('keydown', (e)=>{
 });
 
 let touchStart = null;
+let touchIsSwiping = false;
 let justSwiped = false;
 boardEl.addEventListener('touchstart', (e)=>{
   const t = e.changedTouches[0]; touchStart = { x:t.clientX, y:t.clientY };
+  touchIsSwiping = false;
 }, {passive:true});
+boardEl.addEventListener('touchmove', (e)=>{
+  if(!touchStart) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
+  // once the gesture clearly starts moving on the board, take it over entirely
+  // so the browser never treats it as a page scroll / pull-to-refresh.
+  if(Math.abs(dx) > 6 || Math.abs(dy) > 6){
+    touchIsSwiping = true;
+    e.preventDefault();
+  }
+}, {passive:false});
 boardEl.addEventListener('touchend', (e)=>{
   if(!touchStart) return;
   const t = e.changedTouches[0];
   const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
   const absX = Math.abs(dx), absY = Math.abs(dy);
-  if(Math.max(absX,absY) < 24){ touchStart=null; return; }
+  if(Math.max(absX,absY) < 24){ touchStart=null; touchIsSwiping=false; return; }
   justSwiped = true;
   if(absX > absY) doDirection(dx>0?'right':'left'); else doDirection(dy>0?'down':'up');
   touchStart = null;
+  touchIsSwiping = false;
   setTimeout(()=>{ justSwiped=false; }, 50);
 }, {passive:true});
 
