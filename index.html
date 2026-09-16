@@ -1061,7 +1061,7 @@ function playAd(onDone){
 function useHint(){
   if(!state.running) return;
   playAd(()=>{
-    const action = solveFirstAction(state.board, state.playerPos, 14, 80000);
+    const action = solveFirstAction(state.board, state.playerPos, 26, 300000);
     if(!action){
       document.getElementById('status').textContent = 'No hint available right now.';
       return;
