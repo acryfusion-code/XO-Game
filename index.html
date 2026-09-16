@@ -185,9 +185,11 @@
     padding:9px; border-radius:18px;
     box-shadow:0 22px 46px -18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
     border:1px solid rgba(217,164,65,0.15);
+    touch-action:none;
   }
   #board{ display:grid; gap:4px; touch-action:none; }
   .cell{
+    will-change:transform;
     background:var(--cell);
     border-radius:8px;
     display:flex; align-items:center; justify-content:center;
@@ -817,6 +819,7 @@ function showRecordBanner(text){
 // ---------- game state ----------
 let state = null;
 const boardEl = document.getElementById('board');
+const boardWrapEl = document.getElementById('board-wrap');
 
 function buildBoardDOM(){
   boardEl.style.gridTemplateColumns = `repeat(${SIZE}, minmax(${Math.max(24,Math.floor(280/SIZE))}px, ${Math.max(28,Math.floor(320/SIZE))}px))`;
@@ -1080,27 +1083,23 @@ document.addEventListener('keydown', (e)=>{
 let touchStart = null;
 let touchIsSwiping = false;
 let justSwiped = false;
-boardEl.addEventListener('touchstart', (e)=>{
+boardWrapEl.addEventListener('touchstart', (e)=>{
   const t = e.changedTouches[0]; touchStart = { x:t.clientX, y:t.clientY };
   touchIsSwiping = false;
-}, {passive:true});
-boardEl.addEventListener('touchmove', (e)=>{
+}, {passive:false});
+boardWrapEl.addEventListener('touchmove', (e)=>{
   if(!touchStart) return;
+  e.preventDefault(); // touch-action:none already blocks native scroll here; this is the belt-and-suspenders backup
   const t = e.changedTouches[0];
   const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
-  // once the gesture clearly starts moving on the board, take it over entirely
-  // so the browser never treats it as a page scroll / pull-to-refresh.
-  if(Math.abs(dx) > 6 || Math.abs(dy) > 6){
-    touchIsSwiping = true;
-    e.preventDefault();
-  }
+  if(Math.abs(dx) > 3 || Math.abs(dy) > 3) touchIsSwiping = true;
 }, {passive:false});
-boardEl.addEventListener('touchend', (e)=>{
+boardWrapEl.addEventListener('touchend', (e)=>{
   if(!touchStart) return;
   const t = e.changedTouches[0];
   const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
   const absX = Math.abs(dx), absY = Math.abs(dy);
-  if(Math.max(absX,absY) < 24){ touchStart=null; touchIsSwiping=false; return; }
+  if(Math.max(absX,absY) < 18){ touchStart=null; touchIsSwiping=false; return; }
   justSwiped = true;
   if(absX > absY) doDirection(dx>0?'right':'left'); else doDirection(dy>0?'down':'up');
   touchStart = null;
@@ -1109,7 +1108,7 @@ boardEl.addEventListener('touchend', (e)=>{
 }, {passive:true});
 
 let mouseStart = null;
-boardEl.addEventListener('mousedown', (e)=>{ mouseStart = { x:e.clientX, y:e.clientY }; });
+boardWrapEl.addEventListener('mousedown', (e)=>{ mouseStart = { x:e.clientX, y:e.clientY }; });
 window.addEventListener('mouseup', (e)=>{
   if(!mouseStart) return;
   const dx = e.clientX - mouseStart.x, dy = e.clientY - mouseStart.y;
